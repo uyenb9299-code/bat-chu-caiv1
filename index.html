@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bắt Chữ Cái - Luyện gõ A-Z</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Tahoma,Verdana,Arial,sans-serif;background:#fff8e8;color:#163a5f;overflow:hidden}
+.top{height:94px;display:flex;align-items:center;gap:18px;padding:12px 20px;flex-wrap:wrap}
+.title{font-size:34px;font-weight:800}
+.badge{background:#fff;padding:12px 18px;font-size:24px;font-weight:700}
+.life{color:#d62828}
+button{font-family:Tahoma,Verdana,Arial,sans-serif;border:0;border-radius:8px;background:#4d96ff;color:#fff;font-weight:800;cursor:pointer}
+#restart{margin-left:auto;padding:14px 24px;font-size:20px}
+#message{text-align:center;font-size:24px;font-weight:800;height:40px}
+#game{position:relative;margin:0 14px 14px;height:calc(100vh - 148px);min-height:430px;background:#bfe9ff;border:4px solid #fff;overflow:hidden}
+.sun{position:absolute;right:4%;top:25px;width:62px;height:62px;border-radius:50%;background:#ffd166}
+.cloud{position:absolute;width:90px;height:32px;border-radius:30px;background:#fff}
+.c1{left:5%;top:50px}.c2{left:27%;top:85px}.c3{right:15%;top:55px}
+.ground{position:absolute;left:0;right:0;bottom:0;height:105px;background:#c9efaf;border-top:4px dashed #f05a67}
+.groundText{position:absolute;bottom:25px;width:100%;text-align:center;font-size:18px;font-weight:800;color:#8a572a}
+.intro,.finish{position:absolute;z-index:10;left:50%;top:48%;transform:translate(-50%,-50%);width:min(720px,88%);background:#fff;border:5px solid #78cff0;border-radius:16px;padding:34px;text-align:center}
+.intro h1,.finish h1{font-size:40px;margin:0 0 18px}
+.intro p{font-size:25px;line-height:1.5;font-weight:700;margin:12px 0 25px}
+#start,#again{font-size:25px;padding:17px 32px}
+.letter{position:absolute;z-index:5;min-width:72px;height:72px;padding:5px 14px;border-radius:18px;background:#fff;border:5px solid #ffd166;display:flex;align-items:center;justify-content:center;font-size:45px;font-weight:900;transform:translateX(-50%)}
+.hidden{display:none}
+@media(max-width:700px){
+ .top{height:auto}.title{font-size:25px}.badge{font-size:18px;padding:8px 10px}
+ #restart{font-size:17px;padding:10px 14px}.intro h1{font-size:30px}.intro p{font-size:20px}
+ #message{font-size:19px}.letter{font-size:36px;min-width:60px;height:60px}
+ #game{height:70vh}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="title">BẮT CHỮ CÁI</div>
+  <div class="badge">Điểm: <span id="score">0</span></div>
+  <div class="badge life">Mạng: <span id="lives">10</span></div>
+  <button id="restart">Chơi lại</button>
+</div>
+<div id="message">Nhấn BẮT ĐẦU rồi gõ chữ đang rơi.</div>
+
+<div id="game" tabindex="0">
+  <div class="sun"></div><div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+  <div class="ground"></div><div class="groundText">ĐỪNG ĐỂ CHỮ RƠI QUA VẠCH!</div>
+
+  <div id="intro" class="intro">
+    <h1>BẮT CHỮ CÁI</h1>
+    <p>Chữ A–Z sẽ từ từ rơi xuống.<br>
+    Hãy nhấn đúng phím trước khi chữ chạm vạch.<br>
+    Em có <b>10 mạng</b>.<br>
+    Cố gắng ghi thật nhiều điểm nhé!</p>
+    <button id="start">BẮT ĐẦU CHƠI</button>
+  </div>
+
+  <div id="finish" class="finish hidden">
+    <h1>HOÀN THÀNH!</h1>
+    <p id="result" style="font-size:28px;font-weight:800"></p>
+    <button id="again">CHƠI LẠI</button>
+  </div>
+</div>
+
+<script>
+(function(){
+ const game=document.getElementById('game'), scoreEl=document.getElementById('score'),
+ livesEl=document.getElementById('lives'), msg=document.getElementById('message'),
+ intro=document.getElementById('intro'), finish=document.getElementById('finish'),
+ result=document.getElementById('result');
+ let score=0,lives=10,running=false,letters=[],spawnTimer=null,last=0,spawnEvery=1800,speed=42;
+ const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+ const borders=["#ffd166","#ffb4a2","#b8f2e6","#cdb4db","#a9def9"];
+ let audio=null;
+ function beep(freq,dur){
+   try{
+     audio=audio||new (window.AudioContext||window.webkitAudioContext)();
+     const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=freq;
+     g.gain.value=.06;o.connect(g);g.connect(audio.destination);o.start();
+     g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur/1000);
+     o.stop(audio.currentTime+dur/1000);
+   }catch(e){}
+ }
+ function clearLetters(){letters.forEach(x=>x.el.remove());letters=[]}
+ function start(){
+   clearLetters();score=0;lives=10;spawnEvery=1800;speed=42;scoreEl.textContent=0;livesEl.textContent=10;
+   intro.classList.add('hidden');finish.classList.add('hidden');msg.textContent="GÕ ĐÚNG CHỮ ĐANG RƠI!";
+   running=true;last=performance.now();game.focus();
+   clearTimeout(spawnTimer);spawn();spawnTimer=setTimeout(spawnLoop,spawnEvery);
+   requestAnimationFrame(move);
+ }
+ function spawnLoop(){if(!running)return;spawn();spawnTimer=setTimeout(spawnLoop,spawnEvery)}
+ function spawn(){
+   if(!running)return;
+   const el=document.createElement('div');el.className='letter';
+   const ch=chars[Math.floor(Math.random()*26)];el.textContent=ch;
+   el.style.borderColor=borders[Math.floor(Math.random()*borders.length)];
+   const max=Math.max(90,game.clientWidth-90),x=70+Math.random()*(max-70);
+   el.style.left=x+'px';el.style.top='8px';game.appendChild(el);
+   letters.push({el,ch,y:8});
+ }
+ function remove(x){const i=letters.indexOf(x);if(i>=0)letters.splice(i,1);x.el.remove()}
+ function move(t){
+   if(!running)return;
+   const dt=Math.min(.05,(t-last)/1000);last=t;
+   const limit=game.clientHeight-115;
+   [...letters].forEach(x=>{
+     x.y+=speed*dt;x.el.style.top=x.y+'px';
+     if(x.y>=limit){
+       const ch=x.ch;remove(x);lives--;livesEl.textContent=lives;
+       msg.textContent="CHỮ "+ch+" ĐÃ RƠI — CÒN "+lives+" MẠNG!";beep(190,90);
+       if(lives<=0)end();
+     }
+   });
+   if(running)requestAnimationFrame(move);
+ }
+ function end(){
+   running=false;clearTimeout(spawnTimer);clearLetters();
+   result.textContent="Em đã đạt "+score+" điểm!";
+   finish.classList.remove('hidden');msg.textContent="Em đã hoàn thành lượt chơi.";
+ }
+ function key(e){
+   if(!running)return;
+   const ch=(e.key||"").toUpperCase();if(!/^[A-Z]$/.test(ch))return;
+   const x=letters.find(v=>v.ch===ch);
+   if(x){
+     remove(x);score++;scoreEl.textContent=score;msg.textContent="CHÍNH XÁC! +1 ĐIỂM";beep(720,70);
+     speed=Math.min(62,42+Math.floor(score/20)*5);
+     spawnEvery=Math.max(1350,1800-score*5);
+   }else msg.textContent="CHƯA CÓ CHỮ "+ch+" CẦN BẮT.";
+ }
+ document.getElementById('start').addEventListener('click',start);
+ document.getElementById('restart').addEventListener('click',start);
+ document.getElementById('again').addEventListener('click',start);
+ window.addEventListener('keydown',key);
+})();
+</script>
+</body>
+</html>
