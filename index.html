@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bắt Chữ Cái - 10 Mạng</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eaf7ff;color:#173b59;font-family:Tahoma,Arial,sans-serif;overflow:hidden}
+#top{height:72px;background:#fff;border-bottom:3px solid #b9dff3;display:flex;align-items:center;gap:12px;padding:9px 16px;flex-wrap:wrap}
+.title{font-size:27px;font-weight:900}.pill{background:#f3fbff;border:2px solid #b8dceb;border-radius:12px;padding:9px 14px;font-size:18px;font-weight:900}
+#lives{color:#d93c38}.btn{border:0;border-radius:11px;background:#347bd1;color:#fff;padding:11px 16px;font-size:17px;font-weight:900;cursor:pointer}.right{margin-left:auto}
+#game{position:relative;height:calc(100vh - 72px);min-height:460px;overflow:hidden;background:linear-gradient(#9fdbf7 0 72%,#9ed87e 72%)}
+.sun{position:absolute;right:5%;top:35px;width:70px;height:70px;border-radius:50%;background:#ffd65c;border:6px solid #f5bd45}
+.cloud{position:absolute;width:125px;height:38px;background:white;border-radius:30px;opacity:.9}.c1{left:7%;top:55px}.c2{left:44%;top:100px}
+.hill{position:absolute;bottom:0;width:430px;height:160px;border-radius:50% 50% 0 0;background:#82c96e}.h1{left:-80px}.h2{right:-90px;width:550px;background:#77c263}
+#status{position:absolute;z-index:8;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.92);border:3px solid #62b6df;border-radius:14px;padding:9px 18px;font-size:20px;font-weight:900;text-align:center;min-width:330px}
+.letter{position:absolute;z-index:6;width:74px;height:74px;border-radius:18px;border:5px solid white;box-shadow:0 5px 0 rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;font-size:45px;font-weight:900;color:white;background:#ef6c57}
+.panel{position:absolute;z-index:20;left:50%;top:48%;transform:translate(-50%,-50%);width:min(760px,92%);background:white;border:5px solid #5db5e4;border-radius:22px;padding:28px;text-align:center;box-shadow:0 8px 0 rgba(24,80,110,.14)}
+.panel h1{font-size:36px;margin:0 0 12px}.panel h2{font-size:28px;margin:0 0 12px}.panel p{font-size:20px;line-height:1.55;font-weight:700}
+.keydemo{display:inline-block;margin:8px;padding:10px 17px;border:4px solid #aab6bf;border-bottom-width:8px;border-radius:10px;background:#fff;font-size:28px;font-weight:900}
+.bad{color:#d73b36}.good{color:#2d8751}
+#groundline{position:absolute;left:0;right:0;bottom:54px;height:7px;background:#4d9a52}
+@media(max-width:650px){.title{font-size:19px}.pill{font-size:14px;padding:7px 9px}#top{height:auto;min-height:72px}.panel h1{font-size:28px}.panel p{font-size:17px}}
+</style>
+</head>
+<body>
+<div id="top">
+<div class="title">BẮT CHỮ CÁI</div>
+<div class="pill">Mạng: <span id="lives">10/10</span></div>
+<div class="pill">Điểm: <span id="score">0</span></div>
+<div class="pill">Đã bắt: <span id="caught">0</span></div>
+<button id="restart" class="btn right">Chơi lại</button>
+</div>
+<div id="game" tabindex="0">
+<div class="sun"></div><div class="cloud c1"></div><div class="cloud c2"></div><div class="hill h1"></div><div class="hill h2"></div><div id="groundline"></div>
+<div id="status">Nhìn chữ đang rơi và gõ đúng phím A-Z.</div>
+<div id="intro" class="panel">
+<h1>BẮT CHỮ CÁI - 10 MẠNG</h1>
+<p>Chữ cái A-Z sẽ rơi từ trên xuống.<br>
+Gõ <span class="good">đúng chữ</span>: được 1 điểm.<br>
+Gõ <span class="bad">sai chữ</span>: mất 1 mạng.<br>
+Để chữ rơi xuống đất: cũng mất 1 mạng.</p>
+<div><span class="keydemo">A</span><span class="keydemo">B</span><span class="keydemo">C</span></div>
+<button id="start" class="btn">BẮT ĐẦU</button>
+</div>
+</div>
+<script>
+(function(){
+var game=document.getElementById('game'), livesEl=document.getElementById('lives'),scoreEl=document.getElementById('score'),caughtEl=document.getElementById('caught'),statusEl=document.getElementById('status');
+var lives=10,score=0,caught=0,active=false,letter=null,y=90,x=0,speed=1.45,last=0,raf=0;
+function hud(){livesEl.textContent=lives+'/10';scoreEl.textContent=score;caughtEl.textContent=caught}
+function removeLetter(){if(letter&&letter.parentNode)letter.remove();letter=null}
+function spawn(){if(!active||lives<=0)return;removeLetter();var ch=String.fromCharCode(65+Math.floor(Math.random()*26));letter=document.createElement('div');letter.className='letter';letter.textContent=ch;letter.dataset.ch=ch;x=25+Math.random()*Math.max(50,game.clientWidth-125);y=95;letter.style.left=x+'px';letter.style.top=y+'px';game.appendChild(letter)}
+function lose(msg){if(!active)return;lives--;hud();statusEl.textContent=msg+' - Mất 1 mạng!';if(lives<=0){end();return}spawn()}
+function loop(t){if(!active)return;if(!last)last=t;var dt=Math.min(35,t-last);last=t;if(letter){y+=speed*dt/16.67;letter.style.top=y+'px';var limit=game.clientHeight-135;if(y>=limit){lose('Chữ '+letter.dataset.ch+' đã chạm đất')}}raf=requestAnimationFrame(loop)}
+function key(e){if(!active||!letter)return;var k=(e.key||'').toUpperCase();if(!/^[A-Z]$/.test(k))return;e.preventDefault();if(k===letter.dataset.ch){score++;caught++;hud();statusEl.textContent='Chính xác: '+k+'!';if(caught%8===0)speed=Math.min(2.25,speed+.10);spawn()}else{lose('Gõ '+k+' nhưng chữ đang rơi là '+letter.dataset.ch)}}
+function start(){var p=document.getElementById('intro');if(p)p.remove();active=true;last=0;game.focus();spawn();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop)}
+function end(){active=false;cancelAnimationFrame(raf);removeLetter();statusEl.textContent='Hết 10 mạng!';var p=document.createElement('div');p.className='panel';p.innerHTML='<h2>HẾT MẠNG</h2><p>Em bắt được <b>'+caught+'</b> chữ cái.<br>Điểm: <b>'+score+'</b></p><button class="btn" id="again">CHƠI LẠI</button>';game.appendChild(p);document.getElementById('again').onclick=reset}
+function reset(){active=false;cancelAnimationFrame(raf);removeLetter();Array.prototype.slice.call(game.querySelectorAll('.panel')).forEach(function(n){n.remove()});lives=10;score=0;caught=0;speed=1.45;last=0;hud();var p=document.createElement('div');p.className='panel';p.id='intro';p.innerHTML='<h1>BẮT CHỮ CÁI - 10 MẠNG</h1><p>Gõ đúng chữ đang rơi để ghi điểm.<br><span class="bad">Gõ sai hoặc để chữ chạm đất: mất 1 mạng.</span></p><button class="btn" id="start2">BẮT ĐẦU</button>';game.appendChild(p);document.getElementById('start2').onclick=start;statusEl.textContent='Nhìn chữ đang rơi và gõ đúng phím A-Z.'}
+document.getElementById('start').onclick=start;document.getElementById('restart').onclick=reset;document.addEventListener('keydown',key);hud();
+})();
+</script>
+</body>
+</html>
